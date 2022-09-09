@@ -61,7 +61,6 @@ func modifyResponse() func(*http.Response) error {
 				HttpOnly: true,
 			}
 
-			loginResponse.Token = ""
 			userJson, err := json.Marshal(&loginResponse.User)
 
 			if err != nil {
