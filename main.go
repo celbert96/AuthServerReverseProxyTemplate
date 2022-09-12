@@ -30,6 +30,12 @@ func NewProxy(targetHost string) (*httputil.ReverseProxy, error) {
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(url)
+	originalDirector := proxy.Director
+	proxy.Director = func(r *http.Request) {
+		originalDirector(r)
+		modifyRequest(r)
+	}
+
 	proxy.ModifyResponse = modifyResponse()
 	return proxy, nil
 }
@@ -43,6 +49,7 @@ func ProxyRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter,
 
 func modifyResponse() func(*http.Response) error {
 	return func(resp *http.Response) error {
+		resp.Header.Del("Authorization")
 		var loginResponse LoginResponse
 		body, err := ioutil.ReadAll(resp.Body)
 
@@ -75,6 +82,18 @@ func modifyResponse() func(*http.Response) error {
 
 		resp.Body = ioutil.NopCloser(bytes.NewBufferString(string(body)))
 		return nil
+	}
+}
+
+func modifyRequest(req *http.Request) {
+	cookies := req.Cookies()
+
+	for i := 0; i < len(cookies); i++ {
+		log.Println(cookies[i].Name)
+		log.Println(cookies[i].Value)
+		if cookies[i].Name == "authtoken" {
+			req.Header.Set("Authorization", "Bearer "+cookies[i].Value)
+		}
 	}
 }
 
