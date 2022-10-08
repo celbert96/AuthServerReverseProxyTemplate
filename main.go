@@ -49,6 +49,10 @@ func ProxyRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter,
 
 func modifyResponse() func(*http.Response) error {
 	return func(resp *http.Response) error {
+		if resp.StatusCode != 200 {
+			return nil
+		}
+
 		resp.Header.Del("Authorization")
 		var loginResponse LoginResponse
 		body, err := ioutil.ReadAll(resp.Body)
@@ -89,8 +93,6 @@ func modifyRequest(req *http.Request) {
 	cookies := req.Cookies()
 
 	for i := 0; i < len(cookies); i++ {
-		log.Println(cookies[i].Name)
-		log.Println(cookies[i].Value)
 		if cookies[i].Name == "authtoken" {
 			req.Header.Set("Authorization", "Bearer "+cookies[i].Value)
 		}
@@ -106,5 +108,7 @@ func main() {
 
 	// handle all requests to your server using the proxy
 	http.HandleFunc("/", ProxyRequestHandler(proxy))
+	log.Println("Running on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+
 }
